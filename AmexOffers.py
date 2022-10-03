@@ -5,7 +5,10 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    ElementClickInterceptedException,
+)
 
 from os import getcwd
 from platform import system
@@ -27,7 +30,11 @@ class Offer:
 
     def __eq__(self, other):
         if isinstance(other, Offer):
-            return self.text == other.text and self.merchant == other.merchant and self.expiration == other.expiration
+            return (
+                self.text == other.text
+                and self.merchant == other.merchant
+                and self.expiration == other.expiration
+            )
         return False
 
     def __hash__(self):
@@ -40,7 +47,9 @@ class Offer:
         return self.merchant < other.merchant
 
     def get_csv_line(self):
-        return [self.text, self.merchant, self.expiration] + [card.upper() for card in self.enrolled_cards]
+        return [self.text, self.merchant, self.expiration] + [
+            card.upper() for card in self.enrolled_cards
+        ]
 
 
 def get_driver():
@@ -55,9 +64,11 @@ def get_driver():
 
     options = Options()
     options.add_argument("--headless")
-    options.add_argument('window-size=1920x1080')  # The website layout changes for the default window size
+    options.add_argument(
+        "window-size=1920x1080"
+    )  # The website layout changes for the default window size
     options.add_argument("--start-maximized")
-    options.add_argument('log-level=3')
+    options.add_argument("log-level=3")
     return webdriver.Chrome(executable_path=driver_path, options=options)
 
 
@@ -68,7 +79,9 @@ def open_card_stack(driver, initial_open=False):
             EC.element_to_be_clickable((By.CSS_SELECTOR, card_stack_css))
         )
     except NoSuchElementException:
-        print(f"Ran into error waiting for the card stack to load. Is your username/pw correct?")
+        print(
+            f"Ran into error waiting for the card stack to load. Is your username/pw correct?"
+        )
         return
 
     card_stack = driver.find_element_by_css_selector(card_stack_css)
@@ -76,7 +89,9 @@ def open_card_stack(driver, initial_open=False):
     try:
         card_stack.click()
     except ElementClickInterceptedException:
-        print("Something unexpected went wrong with opening the card stack. Try running the script again")
+        print(
+            "Something unexpected went wrong with opening the card stack. Try running the script again"
+        )
         return
 
     if initial_open:
@@ -92,7 +107,9 @@ def get_card_names_from_account_list(driver, num_cards):
     account_names = []
     # XPath starts at 1
     for i in range(1, num_cards + 1):
-        account_name = driver.find_element_by_xpath(f'//*[@id="accounts"]/section[{i}]/header/section/div/div[2]/div')
+        account_name = driver.find_element_by_xpath(
+            f'//*[@id="accounts"]/section[{i}]/header/section/div/div[2]/div'
+        )
         account_names.append(account_name.text)
     return account_names
 
@@ -110,10 +127,18 @@ def process_card(driver, offer_map, account_list, card_idx):
         return
 
     # Process eligible offers
-    add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, "Available")
-    driver.find_element_by_xpath('//*[@id="offers-nav"]/div[1]/div/a[2]').click()  # Click on enrolled offers
-    add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, "Enrolled")
-    driver.find_element_by_xpath('//*[@id="offers-nav"]/div[1]/div/a[1]').click()  # Click on available offers
+    add_card_to_offers(
+        driver, offer_map, account_list, card_idx, offers_xpath, "Available"
+    )
+    driver.find_element_by_xpath(
+        '//*[@id="offers-nav"]/div[1]/div/a[2]'
+    ).click()  # Click on enrolled offers
+    add_card_to_offers(
+        driver, offer_map, account_list, card_idx, offers_xpath, "Enrolled"
+    )
+    driver.find_element_by_xpath(
+        '//*[@id="offers-nav"]/div[1]/div/a[1]'
+    ).click()  # Click on available offers
 
 
 # Selects the card, opens all the offers, peruses
@@ -135,11 +160,12 @@ def add_card_to_offers(driver, offer_map, account_list, card_idx, offers_xpath, 
             continue
 
         try:
-            expiration_date = offer_body.find_element_by_css_selector("[data-testid='expirationDate']")
+            expiration_date = offer_body.find_element_by_css_selector(
+                "[data-testid='expirationDate']"
+            )
         except NoSuchElementException:
             # Of the form "Expires tomorrow" or "Expires in 13 days"
             expiration_date = expiration.find_element_by_css_selector("span span")
-
 
         offer_info_children = offer_info.find_elements_by_css_selector("p")
         offer = offer_info_children[0].text
@@ -181,8 +207,8 @@ def convert_expiration_to_date(expiration):
 def write_offers_to_file(offer_objects, card_names):
     print(f"Writing {len(offer_objects)} offers to offers.csv")
     headers = ["Offer", "Merchant", "Expiration"] + card_names
-    with open('offers.csv', 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',')
+    with open("offers.csv", "w", newline="") as csvfile:
+        writer = csv.writer(csvfile, delimiter=",")
         writer.writerow(headers)
         for offer_obj in offer_objects:
             writer.writerow(offer_obj.get_csv_line())
@@ -198,7 +224,9 @@ def login(driver):
             amex_info = json.load(f)
 
     except Exception as e:
-        print("Was unable to load secrets.json. Make sure it exists and is formatted correctly")
+        print(
+            "Was unable to load secrets.json. Make sure it exists and is formatted correctly"
+        )
         raise e
 
     if amex_info["login"] == "" or amex_info["password"] == "":
@@ -258,7 +286,7 @@ def main():
         if is_canceled_card(card_name):
             # The 'Canceled' text is stored in a separate <p> under the parent div, so strip it and the
             # captured newline out when printing
-            cleaned_name = card_name.replace('\nCanceled', '')
+            cleaned_name = card_name.replace("\nCanceled", "")
             print(f"Skipping canceled card: {cleaned_name}")
             continue
 

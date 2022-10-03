@@ -1,4 +1,6 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -11,9 +13,7 @@ from functools import total_ordering
 import csv
 from datetime import datetime, timedelta
 import re
-
-AMEX_LOGIN = ""
-AMEX_PW = ""
+import json
 
 
 @total_ordering
@@ -194,6 +194,17 @@ def login(driver):
     print("Logging in")
     # Wait for the login fields and button to load
     try:
+        with open("secrets.json") as f:
+            amex_info = json.load(f)
+
+    except Exception as e:
+        print("Was unable to load secrets.json. Make sure it exists and is formatted correctly")
+        raise e
+
+    if amex_info["login"] == "" or amex_info["password"] == "":
+        raise Exception("Fill out your username and/or password")
+
+    try:
         WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.ID, "login-user"))
         )
@@ -204,13 +215,14 @@ def login(driver):
             EC.element_to_be_clickable((By.ID, "login-submit"))
         )
     except Exception:
-        print(f"Ran into error waiting for the login form to load")
+        print("Ran into error waiting for the login form to load")
         return
+
     username_field = driver.find_element_by_id("login-user")
-    username_field.send_keys(AMEX_LOGIN)
+    username_field.send_keys(amex_info["login"])
 
     password_field = driver.find_element_by_id("login-password")
-    password_field.send_keys(AMEX_PW)
+    password_field.send_keys(amex_info["password"])
 
     login_button = driver.find_element_by_id("login-submit")
     login_button.click()
@@ -224,11 +236,8 @@ def is_canceled_card(card_name):
 
 
 def main():
-    if AMEX_LOGIN == "" or AMEX_PW == "":
-        print("Fill out your username and/or password")
-        return
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
 
-    driver = get_driver()
     driver.get("https://global.americanexpress.com/")
 
     login(driver)
